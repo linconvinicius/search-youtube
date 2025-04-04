@@ -100,6 +100,41 @@ app.get('/search', async (req, res) => {
   }
 });
 
+app.get('/searchByName', async (req, res) => {
+  try {
+    const { name, q, startDate, endDate } = req.query;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Missing channel name' });
+    }
+
+    const searchChannel = await axios.get('https://www.googleapis.com/youtube/v3/search', {
+      params: {
+        part: 'snippet',
+        q: name,
+        type: 'channel',
+        maxResults: 1,
+        key: YOUTUBE_API_KEY,
+      },
+      httpsAgent: agent,
+    });
+
+    const channel = searchChannel.data.items[0];
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+
+    const channelId = channel.id.channelId;
+
+    // Redireciona internamente para /search com os parâmetros
+    req.query.channelId = channelId;
+    delete req.query.name;
+    app._router.handle(req, res, () => {}, '/search');
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch channel by name', details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
