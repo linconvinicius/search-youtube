@@ -74,31 +74,42 @@ app.get('/search', async (req, res) => {
       const stats = statsResponse.data.items[index]?.statistics || {};
       const rawDuration = statsResponse.data.items[index]?.contentDetails?.duration || 'PT0S';
       const formattedDuration = parseDuration(rawDuration);
-      const description = statsResponse.data.items[index]?.snippet?.description || '';
-
+      const fullDescription = statsResponse.data.items[index]?.snippet?.description || '';
+    
+      // Pegar trecho que menciona BMW
+      const bmwMatch = fullDescription.match(/.*?BMW.*?[.!?\n]/gi);
+      const bmwDescription = bmwMatch ? bmwMatch.join(' ').trim() : '';
+    
       return {
         "ID Video": item.id.videoId,
         "Titulo": item.snippet.title,
+        "Canal": item.snippet.channelTitle, // 👈 Adiciona aqui
         "Tipo": item.snippet.liveBroadcastContent === 'none' ? 'Video' : 'Shorts',
         "Data da Publicação": item.snippet.publishedAt,
         "Visualizações": stats.viewCount || 0,
         "Likes": stats.likeCount || 0,
         "Duração": formattedDuration,
         "Comentarios": stats.commentCount || 0,
-        "Descrição": description,
+        "Descrição": bmwDescription,
       };
     });
     
-    // Gerar CSV
-    const csv = parse(results);
-    fs.writeFileSync('videos.csv', csv);
-    
-    cache.set(cacheKey, results); // Armazena no cache
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch data from YouTube API', details: error.message });
-  }
-});
+// Gerar CSV
+    const fileExists = fs.existsSync('videos.csv');
+    const csv = parse(results, { header: !fileExists }); // Cabeçalho só se o arquivo não existir
+
+    if (fileExists) {
+      fs.appendFileSync('videos.csv', '\n' + csv); // Adiciona os dados com quebra de linha
+    } else {
+      fs.writeFileSync('videos.csv', csv); // Cria o arquivo com cabeçalho
+    }
+
+        cache.set(cacheKey, results); // Armazena no cache
+        res.json(results);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch search results', details: error.message });
+      }
+    });
 
 app.get('/searchByName', async (req, res) => {
   try {
