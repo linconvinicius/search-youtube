@@ -58,9 +58,9 @@ app.get('/search', async (req, res) => {
       params,
       httpsAgent: agent, // Usa o agente que ignora o certificado SSL
     });
-    
+
     const videoIds = searchResponse.data.items.map(item => item.id.videoId).join(',');
-    
+
     const statsResponse = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
       params: {
         part: 'statistics,contentDetails,snippet',
@@ -75,41 +75,43 @@ app.get('/search', async (req, res) => {
       const rawDuration = statsResponse.data.items[index]?.contentDetails?.duration || 'PT0S';
       const formattedDuration = parseDuration(rawDuration);
       const fullDescription = statsResponse.data.items[index]?.snippet?.description || '';
-    
+
       // Pegar trecho que menciona BMW
       const bmwMatch = fullDescription.match(/.*?BMW.*?[.!?\n]/gi);
       const bmwDescription = bmwMatch ? bmwMatch.join(' ').trim() : '';
-    
+
       return {
         "ID Video": item.id.videoId,
         "Titulo": item.snippet.title,
-        "Canal": item.snippet.channelTitle, // 👈 Adiciona aqui
-        "Tipo": item.snippet.liveBroadcastContent === 'none' ? 'Video' : 'Shorts',
+        "Canal": item.snippet.channelTitle,
         "Data da Publicação": item.snippet.publishedAt,
         "Visualizações": stats.viewCount || 0,
         "Likes": stats.likeCount || 0,
         "Duração": formattedDuration,
         "Comentarios": stats.commentCount || 0,
         "Descrição": bmwDescription,
+        "URL do Vídeo": `https://www.youtube.com/watch?v=${item.id.videoId}`,
       };
     });
-    
-// Gerar CSV
+
+    // Gerar CSV sem o campo "Descrição"
+    const resultsForCsv = results.map(({ Descrição, ...rest }) => rest);
+
     const fileExists = fs.existsSync('videos.csv');
-    const csv = parse(results, { header: !fileExists }); // Cabeçalho só se o arquivo não existir
+    const csv = parse(resultsForCsv, { header: !fileExists });
 
     if (fileExists) {
-      fs.appendFileSync('videos.csv', '\n' + csv); // Adiciona os dados com quebra de linha
+      fs.appendFileSync('videos.csv', '\n' + csv);
     } else {
-      fs.writeFileSync('videos.csv', csv); // Cria o arquivo com cabeçalho
+      fs.writeFileSync('videos.csv', csv);
     }
 
-        cache.set(cacheKey, results); // Armazena no cache
-        res.json(results);
-      } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch search results', details: error.message });
-      }
-    });
+    cache.set(cacheKey, results); // Armazena no cache
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch search results', details: error.message });
+  }
+});
 
 app.get('/searchByName', async (req, res) => {
   try {
