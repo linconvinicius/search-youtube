@@ -82,6 +82,7 @@ app.get('/search', async (req, res) => {
 
       return {
         "ID Video": item.id.videoId,
+        "URL do Vídeo": `https://www.youtube.com/watch?v=${item.id.videoId}`,
         "Titulo": item.snippet.title,
         "Canal": item.snippet.channelTitle,
         "Data da Publicação": item.snippet.publishedAt,
@@ -90,7 +91,6 @@ app.get('/search', async (req, res) => {
         "Duração": formattedDuration,
         "Comentarios": stats.commentCount || 0,
         "Descrição": bmwDescription,
-        "URL do Vídeo": `https://www.youtube.com/watch?v=${item.id.videoId}`,
       };
     });
 
