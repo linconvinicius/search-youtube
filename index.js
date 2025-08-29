@@ -213,7 +213,6 @@ app.get('/search-all-channels', async (req, res) => {
       const batchResults = await Promise.all(promises);
       batchResults.forEach(results => allResults.push(...results));
       
-      // Delay entre lotes para evitar rate limiting
       if (i + batchSize < channelIds.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
