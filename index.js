@@ -226,7 +226,7 @@ app.get('/search-all-channels', async (req, res) => {
     // Gerar CSV consolidado
     if (allResults.length > 0) {
       const resultsForCsv = allResults.map(({ Descrição, ...rest }) => rest);
-      const fileName = `videos_all_channels_${q}_${new Date().toISOString().split('T')[0]}.csv`;
+      const fileName = `videos_${q}_${new Date().toISOString().split('T')[0]}.csv`;
       const csv = parse(resultsForCsv);
       fs.writeFileSync(fileName, csv);
     }
