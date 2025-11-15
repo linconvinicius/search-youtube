@@ -1,0 +1,38 @@
+{
+  "name": "search-youtube",
+  "version": "1.0.0",
+  "description": "API para busca de vídeos em canais automotivos do YouTube",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "scheduled-search": "node scripts/run-scheduled-search.js",
+    "kill-port": "bash scripts/kill-port.sh"
+  },
+  "keywords": [
+    "youtube",
+    "automotive",
+    "api",
+    "video",
+    "search"
+  ],
+  "author": "Lincon Vinicius",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "node-cache": "^5.1.2",
+    "json2csv": "^5.0.7",
+    "node-cron": "^3.0.3",
+    "googleapis": "^128.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
