@@ -2,9 +2,9 @@ const express = require('express');
 const SearchController = require('../controllers/searchController');
 const ChannelsController = require('../controllers/channelsController');
 
-const createApiRoutes = (apiKey, cache) => {
+const createApiRoutes = (apiKey, cache, googleSheetsService = null) => {
   const router = express.Router();
-  const searchController = new SearchController(apiKey, cache);
+  const searchController = new SearchController(apiKey, cache, googleSheetsService);
 
   const validateApiKey = (req, res, next) => {
     if (!apiKey) {
