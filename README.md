@@ -13,7 +13,8 @@ projeto/
 │   └── channelsController.js 
 ├── services/
 │   ├── youtubeService.js    
-│   └── csvService.js        
+│   ├── csvService.js        
+│   └── schedulerService.js  # Novo: Agendamento automático
 ├── routes/
 │   └── api.js              
 ├── utils/
@@ -38,6 +39,11 @@ projeto/
 ### **services/csvService.js**
 - Geração de arquivos CSV
 - Formatação dos dados para exportação
+
+### **services/schedulerService.js**
+- Agendamento automático de buscas
+- Execução periódica usando node-cron
+- Configuração de horários e parâmetros
 
 ### **controllers/searchController.js**
 - Lógica de negócio das buscas
@@ -156,3 +162,37 @@ A API gera automaticamente arquivos CSV:
 - Cache de 10 minutos por padrão
 - Chaves de cache baseadas nos parâmetros da busca
 - Melhora significativa na performance
+
+## 🤖 Agendamento Automático
+
+O sistema suporta execução automática diária da busca. Você tem **3 opções**:
+
+### Opção 1: Script Standalone + Cron/Task Scheduler (Recomendado)
+✅ **Não precisa manter servidor rodando**
+
+```bash
+# Testar manualmente
+npm run scheduled-search
+
+# Configurar no sistema operacional (cron no Linux/Mac, Task Scheduler no Windows)
+```
+
+Veja: [GUIA_WINDOWS_AGENDAMENTO.md](GUIA_WINDOWS_AGENDAMENTO.md) para Windows
+Veja: [SOLUCOES_AGENDAMENTO.md](SOLUCOES_AGENDAMENTO.md) para todas as opções
+
+### Opção 2: Servidor com Agendamento Interno
+✅ **Servidor precisa estar rodando**
+
+Configure no `.env`:
+```env
+ENABLE_SCHEDULER=true
+SCHEDULER_SEARCH_QUERY=carro
+SCHEDULER_CRON_SCHEDULE=0 2 * * *
+```
+
+Veja: [CONFIGURACAO_AGENDAMENTO.md](CONFIGURACAO_AGENDAMENTO.md) para detalhes
+
+### Opção 3: PM2 ou Serviços de Cloud
+✅ **Para produção/profissional**
+
+Veja: [SOLUCOES_AGENDAMENTO.md](SOLUCOES_AGENDAMENTO.md) para detalhes
