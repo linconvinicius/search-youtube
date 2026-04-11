@@ -70,11 +70,9 @@ class GoogleSheetsService {
       const rows = response.data.values || [];
       const existingIds = new Set();
 
-      // Pular cabeçalho (linha 5) e pegar IDs da coluna A (índice 0)
-      // Assumindo que a linha 5 é o cabeçalho e os dados começam na linha 6
-      rows.forEach((row, index) => {
-        // Pular linha 0 (cabeçalho na planilha) e pegar IDs
-        if (index > 0 && row[0] && row[0].trim()) {
+      // O range já começa na linha 6 (dados reais), não há cabeçalho para pular
+      rows.forEach((row) => {
+        if (row[0] && row[0].trim()) {
           existingIds.add(row[0].trim());
         }
       });
@@ -105,7 +103,7 @@ class GoogleSheetsService {
     }
 
     // Mapear dados para as colunas da planilha:
-    // ID Video | URL | Titulo | Canal | Data da Publicação | Views | Likes | Duração | Comentarios | Cadastrado
+    // ID Video | URL | Titulo | Canal | Data da Publicação | Views | Likes | Duração | Comentarios |
     return [
       videoData['ID Video'] || '',
       videoData['URL do Vídeo'] || '',
@@ -115,8 +113,7 @@ class GoogleSheetsService {
       videoData['Visualizações'] || 0,
       videoData['Likes'] || 0,
       videoData['Duração'] || '',
-      videoData['Comentarios'] || 0,
-      'Cadastrado' // Status fixo
+      videoData['Comentarios'] || 0
     ];
   }
 
@@ -203,4 +200,3 @@ class GoogleSheetsService {
 }
 
 module.exports = GoogleSheetsService;
-
