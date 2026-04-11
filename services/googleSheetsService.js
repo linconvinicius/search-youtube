@@ -1,14 +1,27 @@
 const { google } = require('googleapis');
 
+// Nomes das abas em português, correspondendo às abas da planilha "Monitoramento BMW 2026"
+const MONTH_TABS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 class GoogleSheetsService {
   constructor(credentials, spreadsheetId) {
     this.spreadsheetId = spreadsheetId;
     this.auth = null;
     this.sheets = null;
-    
+
     if (credentials) {
       this.initializeAuth(credentials);
     }
+  }
+
+  /**
+   * Retorna o nome da aba correspondente ao mês atual (ex: 'Abril')
+   */
+  getCurrentMonthTab() {
+    return MONTH_TABS[new Date().getMonth()];
   }
 
   /**
@@ -18,25 +31,22 @@ class GoogleSheetsService {
   initializeAuth(credentials) {
     try {
       let auth;
-      
-      // Se for string, assume que é caminho do arquivo
+
       if (typeof credentials === 'string') {
         const fs = require('fs');
         const path = require('path');
-        
-        // Verificar se o arquivo existe
+
         const credsPath = path.resolve(credentials);
         if (!fs.existsSync(credsPath)) {
           throw new Error(`Arquivo de credenciais não encontrado: ${credsPath}`);
         }
-        
+
         const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
         auth = new google.auth.GoogleAuth({
           credentials: creds,
           scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
       } else {
-        // Se for objeto, usa diretamente
         auth = new google.auth.GoogleAuth({
           credentials: credentials,
           scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -52,15 +62,18 @@ class GoogleSheetsService {
   }
 
   /**
-   * Obtém todos os IDs de vídeos já cadastrados na planilha
-   * @param {string} range - Range da planilha (ex: 'Sheet1!A:A')
+   * Obtém todos os IDs de vídeos já cadastrados na aba do mês
+   * @param {string} sheetTab - Nome da aba (ex: 'Abril'). Se não informado, usa o mês atual.
    * @returns {Promise<Set<string>>} Set com IDs de vídeos existentes
    */
-  async getExistingVideoIds(range = 'Sheet1!A6:A') {
+  async getExistingVideoIds(sheetTab = null) {
     try {
       if (!this.sheets) {
         throw new Error('Google Sheets não inicializado. Configure as credenciais.');
       }
+
+      const tab = sheetTab || this.getCurrentMonthTab();
+      const range = `${tab}!A6:A`;
 
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -77,33 +90,31 @@ class GoogleSheetsService {
         }
       });
 
+      console.log(`📋 Aba "${tab}": ${existingIds.size} vídeo(s) já cadastrado(s)`);
       return existingIds;
     } catch (error) {
       console.error('Erro ao buscar vídeos existentes:', error.message);
-      // Retorna set vazio em caso de erro para não bloquear a inserção
       return new Set();
     }
   }
 
   /**
    * Converte dados do YouTube para formato da planilha
+   * Ordem das colunas: ID Video | URL | Titulo | Canal | Data da Publicação | Views | Likes | Duração | Comentarios |
    * @param {Object} videoData - Dados do vídeo do YouTube
    * @returns {Array} Array com valores na ordem das colunas da planilha
    */
   formatVideoDataForSheet(videoData) {
-    // Formatar data de publicação (de ISO para DD/MM/YYYY)
     let formattedDate = videoData['Data da Publicação'];
     if (formattedDate) {
       try {
         const date = new Date(formattedDate);
         formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
       } catch (e) {
-        // Se falhar, mantém o formato original
+        // mantém o formato original em caso de erro
       }
     }
 
-    // Mapear dados para as colunas da planilha:
-    // ID Video | URL | Titulo | Canal | Data da Publicação | Views | Likes | Duração | Comentarios |
     return [
       videoData['ID Video'] || '',
       videoData['URL do Vídeo'] || '',
@@ -118,12 +129,12 @@ class GoogleSheetsService {
   }
 
   /**
-   * Adiciona vídeos à planilha (apenas novos, evita duplicatas)
+   * Adiciona vídeos à aba do mês correspondente (apenas novos, evita duplicatas)
    * @param {Array} videos - Array de objetos com dados dos vídeos
-   * @param {string} range - Range onde adicionar (ex: 'Sheet1!A6')
+   * @param {string} sheetTab - Nome da aba (ex: 'Abril'). Se não informado, usa o mês atual.
    * @returns {Promise<Object>} Resultado da operação
    */
-  async addVideosToSheet(videos, range = 'Sheet1!A6') {
+  async addVideosToSheet(videos, sheetTab = null) {
     try {
       if (!this.sheets) {
         throw new Error('Google Sheets não inicializado. Configure as credenciais.');
@@ -133,9 +144,14 @@ class GoogleSheetsService {
         return { added: 0, skipped: 0, total: 0 };
       }
 
-      // Obter vídeos já existentes
-      const existingIds = await this.getExistingVideoIds('Sheet1!A6:A');
-      
+      const tab = sheetTab || this.getCurrentMonthTab();
+      const range = `${tab}!A6`;
+
+      console.log(`📊 Escrevendo na aba: "${tab}"`);
+
+      // Verificar quais vídeos já existem na aba do mês
+      const existingIds = await this.getExistingVideoIds(tab);
+
       // Filtrar apenas vídeos novos
       const newVideos = videos.filter(video => {
         const videoId = video['ID Video'];
@@ -143,31 +159,28 @@ class GoogleSheetsService {
       });
 
       if (newVideos.length === 0) {
-        console.log('📊 Nenhum vídeo novo para adicionar à planilha');
-        return { added: 0, skipped: videos.length, total: videos.length };
+        console.log(`📊 Nenhum vídeo novo para adicionar à aba "${tab}"`);
+        return { added: 0, skipped: videos.length, total: videos.length, tab };
       }
 
-      // Converter vídeos para formato da planilha
       const values = newVideos.map(video => this.formatVideoDataForSheet(video));
 
-      // Adicionar à planilha
       const response = await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
         range: range,
         valueInputOption: 'USER_ENTERED',
         insertDataOption: 'INSERT_ROWS',
-        resource: {
-          values: values,
-        },
+        resource: { values },
       });
 
-      console.log(`📊 ${newVideos.length} vídeo(s) adicionado(s) à planilha Google Sheets`);
-      console.log(`   ${videos.length - newVideos.length} vídeo(s) já existente(s) foram ignorados`);
+      console.log(`📊 ${newVideos.length} vídeo(s) adicionado(s) à aba "${tab}"`);
+      console.log(`   ${videos.length - newVideos.length} vídeo(s) duplicado(s) ignorado(s)`);
 
       return {
         added: newVideos.length,
         skipped: videos.length - newVideos.length,
         total: videos.length,
+        tab,
         updatedCells: response.data.updates?.updatedCells || 0
       };
     } catch (error) {
@@ -177,7 +190,7 @@ class GoogleSheetsService {
   }
 
   /**
-   * Testa a conexão com a planilha
+   * Testa a conexão com a planilha e lista as abas disponíveis
    * @returns {Promise<boolean>} true se conectado com sucesso
    */
   async testConnection() {
@@ -190,7 +203,11 @@ class GoogleSheetsService {
         spreadsheetId: this.spreadsheetId,
       });
 
-      console.log(`✅ Conectado à planilha: ${response.data.properties.title}`);
+      const title = response.data.properties.title;
+      const tabs = response.data.sheets.map(s => s.properties.title);
+      console.log(`✅ Conectado à planilha: "${title}"`);
+      console.log(`   Abas disponíveis: ${tabs.join(', ')}`);
+      console.log(`   Aba do mês atual: "${this.getCurrentMonthTab()}"`);
       return true;
     } catch (error) {
       console.error('❌ Erro ao conectar com planilha:', error.message);
