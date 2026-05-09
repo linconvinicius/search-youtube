@@ -123,7 +123,7 @@ class GoogleSheetsService {
       formattedDate || '',
       videoData['Visualizações'] || 0,
       videoData['Likes'] || 0,
-      videoData['Duração'] || '',
+      videoData['Duração'] ? `'${videoData['Duração']}` : '',
       videoData['Comentarios'] || 0
     ];
   }
