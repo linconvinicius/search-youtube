@@ -120,7 +120,7 @@ class GoogleSheetsService {
       videoData['URL do Vídeo'] || '',
       videoData['Titulo'] || '',
       videoData['Canal'] || '',
-      formattedDate || '',
+      formattedDate ? `'${formattedDate}` : '',
       videoData['Visualizações'] || 0,
       videoData['Likes'] || 0,
       videoData['Duração'] ? `'${videoData['Duração']}` : '',
