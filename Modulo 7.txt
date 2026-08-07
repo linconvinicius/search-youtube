@@ -107,3 +107,8 @@ Cada arquivo `.robot` é dividido em seções, que são indicadas por três aste
         - `Test Teardown`: Uma palavra-chave que será executada **depois de cada caso de teste** neste arquivo, independentemente do resultado (útil para limpeza).
         - `Suite Setup` / `Suite Teardown`: Semelhante ao `Test Setup`/`Teardown`, mas executado uma vez antes/depois de **todos os testes** no arquivo/suíte.
     - **Exemplo:**
+	*** Settings ***
+Library           SeleniumLibrary
+Resource          common_keywords.robot  # Importa palavras-chave comuns
+Variables         config.py              # Importa variáveis de um arquivo Python
+Test Setup        Abrir Navegador        # Executa a palavra-chave 
