@@ -1,0 +1,273 @@
+# Módulo 9: Automação de API (Back-end)
+
+## 9.1 Usando a RequestsLibrary: A Ferramenta Essencial para Testes de API
+
+Para automatizar testes de API com Robot Framework, a **RequestsLibrary** é a ferramenta mais utilizada e recomendada. Ela é uma biblioteca externa que fornece um conjunto rico de palavras-chave para interagir com APIs HTTP, permitindo enviar requisições (GET, POST, PUT, DELETE, etc.) e receber as respostas de forma eficiente [1]. A RequestsLibrary é construída sobre a popular biblioteca `requests` do Python, conhecida por sua simplicidade, poder e legibilidade.
+
+### Instalação da RequestsLibrary
+
+Antes de começar a usá-la, você precisa instalar a biblioteca em seu ambiente Python. Abra seu terminal e execute o seguinte comando:
+
+```bash
+pip install robotframework-requests
+```
+
+### Importando a RequestsLibrary em seu Projeto Robot
+
+Em seu arquivo `.robot` (ou em um arquivo de recurso `.resource`), você importa a biblioteca na seção `*** Settings ***` para que suas palavras-chave fiquem disponíveis:
+
+```
+*** Settings ***
+Library    RequestsLibrary
+```
+
+### Criando uma Sessão HTTP: Otimizando Suas Requisições
+
+Antes de enviar requisições individuais, é uma **boa prática** criar uma sessão HTTP. Uma sessão permite que você reutilize configurações (como cabeçalhos, autenticação, proxies) e gerencie cookies automaticamente entre as requisições. Isso é especialmente útil para APIs que exigem autenticação ou que mantêm estado entre as chamadas.
+
+```
+*** Keywords ***
+Criar Sessao API
+    [Arguments]    ${base_url}
+    Create Session    minha_api    ${base_url}    # 'minha_api' é um alias para a sessão
+```
+
+- `Create Session`: Palavra-chave da RequestsLibrary que inicializa uma sessão HTTP.
+- `minha_api`: É um alias (nome) que você dá a esta sessão. Você o usará para referenciar esta sessão em requisições futuras.
+- `${base_url}`: A URL base da sua API (ex: `https://api.exemplo.com`).
+
+### Enviando Requisições: GET, POST, PUT, DELETE
+
+Com a sessão criada, você pode usar palavras-chave específicas da RequestsLibrary para enviar suas requisições HTTP. As palavras-chave são intuitivas e correspondem aos verbos HTTP que você aprendeu no Módulo 5.
+
+#### Exemplo de GET Request (Obtendo Dados):
+
+```
+*** Test Cases ***
+Cenário: Obter lista de usuários
+    Criar Sessao API    https://api.exemplo.com
+    ${response}=    Get Request    minha_api    /usuarios
+    Log To Console    Status Code: ${response.status_code}
+    Log To Console    Corpo da Resposta: ${response.json()}
+```
+
+- `Get Request`: Envia uma requisição GET.
+- `minha_api`: O alias da sessão que criamos.
+- `/usuarios`: O endpoint específico da API que queremos acessar.
+- `${response}`: A variável que armazenará o objeto de resposta da requisição. Este objeto contém informações cruciais como o status code, o corpo da resposta, cabeçalhos, etc.
+
+#### Exemplo de POST Request (Criando um Recurso):
+
+```
+*** Test Cases ***
+Cenário: Criar novo usuário
+    Criar Sessao API    https://api.exemplo.com
+    &{headers}=    Create Dictionary    Content-Type=application/json
+    &{body}=       Create Dictionary    nome=Novo Usuario    email=novo.usuario@exemplo.com    senha=SenhaSegura123
+    ${response}=   Post Request    minha_api    /usuarios    headers=${headers}    json=${body}
+    Log To Console    Status Code: ${response.status_code}
+    Log To Console    Corpo da Resposta: ${response.json()}
+```
+
+- `&{headers}= Create Dictionary`: Cria um dicionário para os cabeçalhos da requisição. É comum enviar o `Content-Type` como `application/json` para requisições POST/PUT.
+- `&{body}= Create Dictionary`: Cria um dicionário para o corpo da requisição. A palavra-chave `json=${body}` da RequestsLibrary automaticamente serializa este dicionário para uma string JSON antes de enviar.
+
+#### Exemplo de PUT Request (Atualizando um Recurso):
+
+```
+*** Test Cases ***
+Cenário: Atualizar informações de um usuário existente
+    Criar Sessao API    https://api.exemplo.com
+    &{headers}=    Create Dictionary    Content-Type=application/json
+    &{body}=       Create Dictionary    nome=Usuario Atualizado    email=atualizado.usuario@exemplo.com
+    ${response}=   Put Request    minha_api    /usuarios/123    headers=${headers}    json=${body}
+    Log To Console    Status Code: ${response.status_code}
+    Log To Console    Corpo da Resposta: ${response.json()}
+```
+
+#### Exemplo de DELETE Request (Removendo um Recurso):
+
+```
+*** Test Cases ***
+Cenário: Deletar um usuário
+    Criar Sessao API    https://api.exemplo.com
+    ${response}=    Delete Request    minha_api    /usuarios/123
+    Log To Console    Status Code: ${response.status_code}
+```
+
+## 9.2 Validando Respostas de API: Status Codes e Corpos JSON
+
+Enviar requisições é apenas metade do trabalho. A parte mais importante do teste de API é **validar a resposta** para garantir que a API se comportou conforme o esperado. Isso envolve verificar o código de status HTTP e o conteúdo do corpo da resposta, especialmente se for JSON.
+
+### Validando Status Codes
+
+A RequestsLibrary fornece palavras-chave específicas para verificar o status code da resposta, tornando a validação simples e legível.
+
+- **`Status Should Be`:** Verifica se o status code da resposta é o esperado.
+
+```
+*** Test Cases ***
+Cenário: Validar status code de sucesso (200 OK)
+    Criar Sessao API    https://api.exemplo.com
+    ${response}=    Get Request    minha_api    /produtos/1
+    Status Should Be    200    ${response}    # Verifica se o status code é 200
+
+Cenário: Validar status code de recurso não encontrado (404 Not Found)
+    Criar Sessao API    https://api.exemplo.com
+    ${response}=    Get Request    minha_api    /produtos/9999    # Um ID de produto que não existe
+    Status Should Be    404    ${response}    # Verifica se o status code é 404
+```
+
+Você também pode acessar o status code diretamente do objeto de resposta para validações mais complexas ou para log: `${response.status_code}`.
+
+### Validando Corpos de Resposta (JSON)
+
+Para validar o conteúdo JSON da resposta, você precisará converter a string JSON recebida em um objeto Python (geralmente um dicionário ou uma lista) e então usar palavras-chave de asserção para verificar os valores.
+
+- **`To Json`:** Converte uma string JSON em um objeto Python. Esta palavra-chave é da `Collections` Library, que é uma biblioteca padrão do Robot Framework, mas é frequentemente usada em conjunto com a RequestsLibrary.
+
+```
+*** Settings ***
+Library    RequestsLibrary
+Library    Collections    # Necessário para To Json e outras palavras-chave de coleção
+
+*** Test Cases ***
+Cenário: Validar dados de um usuário específico
+    Criar Sessao API    https://api.exemplo.com
+    ${response}=    Get Request    minha_api    /usuarios/123
+    Status Should Be    200    ${response}
+    
+    # Converte o conteúdo da resposta (string JSON) para um objeto Python
+    ${json_response}=    To Json    ${response.content}
+    
+    # Valida campos específicos do JSON
+    Should Be Equal    ${json_response["nome"]}    João Silva
+    Should Be Equal    ${json_response["email"]}    joao.silva@exemplo.com
+    
+    # Valida se um item está presente em uma lista dentro do JSON
+    Should Contain    ${json_response["hobbies"]}    leitura
+    
+    # Valida um campo aninhado
+    Should Be Equal    ${json_response["endereco"]["cidade"]}    São Paulo
+```
+
+- **`Should Be Equal`:** Verifica se dois valores são idênticos.
+- **`Should Contain`:** Verifica se uma lista (ou string) contém um determinado item (ou substring).
+- **`Should Not Be Empty`:** Verifica se uma lista ou dicionário não está vazio.
+
+Para validações mais complexas de JSON, como verificar a estrutura completa de um objeto ou a presença de múltiplos campos sem se preocupar com a ordem, você pode usar a `Collections` Library ou até mesmo escrever suas próprias palavras-chave em Python para validação mais avançada (por exemplo, usando esquemas JSON).
+
+## 9.3 Automação de Fluxos Ponta a Ponta (E2E): Integrando Front-end e Back-end
+
+Testes de API são excelentes para validar a lógica de negócio e a integração entre serviços no backend. No entanto, para garantir que todo o sistema funciona como um todo, desde a interface do usuário (front-end) até o backend e o banco de dados, precisamos de testes **ponta a ponta (End-to-End - E2E)**. Estes testes simulam o fluxo completo de um usuário, combinando automação web (front-end) e automação de API (back-end) para verificar a integridade do sistema [2].
+
+### Por que Testes E2E são Importantes?
+
+- **Confiança no Sistema:** Validam a interação entre todas as camadas da aplicação (UI, API, Banco de Dados, serviços externos).
+- **Experiência do Usuário:** Garantem que o fluxo de trabalho do usuário final funciona como esperado.
+- **Detecção de Problemas de Integração:** Revelam bugs que só aparecem quando diferentes partes do sistema interagem.
+
+### Exemplo de Fluxo E2E: Cadastro de Usuário e Verificação via API
+
+Vamos considerar um cenário comum: um usuário se cadastra via interface web, e queremos verificar se o cadastro foi realmente efetivado no backend via API. Este é um exemplo perfeito de teste E2E.
+
+```
+*** Settings ***
+Library    SeleniumLibrary    # Para automação web
+Library    RequestsLibrary    # Para automação de API
+Resource   resources/pages/CadastroPage.robot  # Keywords para interagir com a página de cadastro
+
+*** Test Cases ***
+Cenário: Cadastro de novo usuário via Web e verificação via API
+    [Tags]    E2E    Cadastro
+
+    # --- Parte 1: Automação Web (Front-end) ---
+    Log To Console    Iniciando cadastro via interface web...
+    Open Browser    https://www.exemplo.com/cadastro    chrome
+    Maximize Browser Window
+    
+    Preencher Campo Nome    Novo Usuário E2E
+    Preencher Campo Email   e2e.usuario@exemplo.com
+    Preencher Campo Senha   SenhaE2E123
+    Clicar Botao Cadastrar
+    
+    Page Should Contain    Cadastro realizado com sucesso
+    Close Browser
+    Log To Console    Cadastro web concluído com sucesso.
+
+    # --- Parte 2: Automação de API (Back-end) ---
+    Log To Console    Verificando cadastro via API...
+    Criar Sessao API    https://api.exemplo.com
+    
+    # Consulta a API para buscar o usuário recém-cadastrado pelo e-mail
+    ${response}=    Get Request    minha_api    /usuarios?email=e2e.usuario@exemplo.com
+    Status Should Be    200    ${response}
+    
+    ${json_response}=    To Json    ${response.content}
+    
+    # Verifica se a lista de usuários retornada não está vazia e se o primeiro usuário corresponde ao que foi cadastrado
+    Should Not Be Empty    ${json_response}    # Espera que a lista de usuários não esteja vazia
+    Should Be Equal    ${json_response[0]["nome"]}    Novo Usuário E2E
+    Should Be Equal    ${json_response[0]["email"]}    e2e.usuario@exemplo.com
+    Log To Console    Verificação via API concluída com sucesso. Usuário encontrado.
+```
+
+Neste exemplo, combinamos:
+
+1. **Automação Web:** Usamos a `SeleniumLibrary` (ou `BrowserLibrary`) para interagir com a página de cadastro, preenchendo o formulário e clicando no botão de submissão.
+2. **Automação de API:** Após o cadastro via UI, usamos a `RequestsLibrary` para consultar a API de usuários, filtrando pelo e-mail recém-cadastrado, e validamos se o usuário foi criado corretamente no backend com os dados esperados.
+
+Essa abordagem garante que a integração entre front-end e back-end está funcionando perfeitamente, oferecendo uma confiança muito maior na qualidade e na funcionalidade completa do sistema.
+
+## 9.4 Geração de Relatórios de Execução: Visibilidade e Análise
+
+Uma das grandes vantagens do Robot Framework é a sua capacidade de gerar relatórios e logs de execução de forma automática, detalhada e em um formato de fácil compreensão. Após cada execução de teste, o Robot Framework gera três arquivos principais no diretório onde o comando `robot` foi executado [3]:
+
+1. **`output.xml`:** Este é o arquivo XML bruto que contém todos os dados da execução do teste. Ele é usado internamente pelo Robot Framework para gerar os outros relatórios e pode ser processado por ferramentas externas para análises mais avançadas ou integração com outros sistemas.
+2. **`log.html`:** Um arquivo HTML interativo que fornece uma visão detalhada de cada passo de cada teste. Ele é extremamente útil para depurar testes que falharam, pois mostra:
+    - As palavras-chave executadas e seus argumentos.
+    - Os resultados de cada palavra-chave (passou/falhou).
+    - Mensagens de log (incluindo aquelas que você adiciona com `Log To Console` ou `Log`).
+    - **Capturas de tela (screenshots):** Se configurado, o Robot Framework pode automaticamente tirar screenshots em caso de falha, que são incorporadas ao log, facilitando a identificação visual do problema.
+3. **`report.html`:** Um arquivo HTML que apresenta um resumo executivo da execução dos testes. É ideal para compartilhar com stakeholders (gerentes, Product Owners) e para uma visão rápida da saúde do projeto, pois mostra:
+    - O número total de testes executados.
+    - Quantos testes passaram e quantos falharam.
+    - A duração total da execução.
+    - Uma visão geral dos resultados por suíte de teste e por tag.
+    - Gráficos de pizza que visualizam a proporção de testes passados/falhos.
+
+### Exemplo de Comando de Execução (que gera os relatórios):
+
+Para executar um arquivo de teste específico:
+
+```bash
+robot tests/meu_teste.robot
+```
+
+Para executar todos os testes em um diretório (o Robot Framework encontrará todos os arquivos `.robot` dentro dele):
+
+```bash
+robot tests/
+```
+
+### Personalizando Relatórios:
+
+O Robot Framework permite algumas personalizações nos relatórios através de opções de linha de comando:
+
+- **Nome dos arquivos de saída:** Use as opções `--output`, `--log`, `--report` para especificar nomes diferentes para os arquivos de saída, o que é útil para organizar execuções diferentes.
+    - Ex: `robot --output resultados_sprint_1.xml --log log_sprint_1.html --report report_sprint_1.html tests/`
+- **Título do relatório:** Use `--name` para definir um título personalizado para a suíte de testes no relatório.
+    - Ex: `robot --name "Testes de Regressão do Módulo de Login" tests/login_tests.robot`
+- **Tags:** Você pode usar tags nos seus casos de teste (`[Tags]    Regressao    Smoke`) e filtrar a execução ou a visualização dos relatórios por essas tags, o que é muito útil para gerenciar grandes conjuntos de testes.
+
+Os relatórios gerados pelo Robot Framework são uma ferramenta poderosa para QAs, permitindo analisar os resultados dos testes de forma eficiente, comunicar o status da qualidade de forma clara e identificar rapidamente a causa raiz de falhas, acelerando o processo de depuração e correção.
+
+---
+
+### Referências
+
+[1] Robot Framework RequestsLibrary. *Introduction*. Disponível em: https://marketsquare.github.io/robotframework-requests/. Acesso em: 20 mar. 2026.
+
+[2] Testim. *What is End-to-End Testing?*. Disponível em: https://www.testim.io/blog/what-is-end-to-end-testing/. Acesso em: 20 mar. 2026.
+
+[3] Robot Framework. *Result Files*. Disponível em: https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#result-files. Acesso em: 20 mar. 2026.

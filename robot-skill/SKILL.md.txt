@@ -1,0 +1,455 @@
+---
+name: robot-framework-skill
+description: >
+  Especialista em criação de cenários de teste automatizados com Robot Framework, seguindo padrões de projeto de mercado (POM, Keyword-Driven, BDD, Data-Driven). Use esta skill sempre que o usuário quiser: criar testes funcionais (UI/Web) ou de API (REST/SOAP), estruturar um projeto de automação do zero, definir padrões de keywords reutilizáveis, escrever suites de testes resilientes com retry e tratamento de falhas, gerar massa de dados para testes, configurar pipelines de CI/CD com GitHub Actions, ou revisar e melhorar testes Robot Framework existentes. Acione esta skill mesmo que o usuário diga apenas "cria um teste para o login", "quero automatizar essa API", "como estruturo meu projeto Robot?", ou qualquer pedido relacionado a QA, automação, Robot Framework, Selenium, Playwright, ou testes de regressão.
+---
+ 
+# Robot Framework Skill — Testes Manuteníveis, Escaláveis e de Qualidade
+ 
+## Visão Geral
+ 
+Esta skill orienta a criação de projetos de automação com Robot Framework para times avançados, cobrindo:
+- **Padrões de projeto**: POM, Keyword-Driven, BDD, Data-Driven
+- **Tipos de teste**: Funcional (UI/Web) e API (REST/SOAP)
+- **Libraries**: SeleniumLibrary, Browser (Playwright), RequestsLibrary, BuiltIn, Collections, DatabaseLibrary
+- **CI/CD**: GitHub Actions
+- **Qualidade**: Allure Reports, Robocop (linting), retry automático, testes resilientes
+---
+ 
+## Estrutura de Referência do Projeto
+ 
+Sempre que criar ou orientar um projeto Robot Framework do zero, use esta estrutura:
+ 
+```
+project-root/
+│
+├── .github/
+│   └── workflows/
+│       ├── regression.yml
+│       └── smoke.yml
+│
+├── resources/
+│   ├── keywords/
+│   │   ├── common_keywords.resource
+│   │   ├── api_keywords.resource
+│   │   └── ui_keywords.resource
+│   ├── variables/
+│   │   ├── common_variables.resource
+│   │   └── env/
+│   │       ├── dev.yaml
+│   │       ├── staging.yaml
+│   │       └── prod.yaml
+│   └── hooks/
+│       └── hooks.resource
+│
+├── pages/
+│   ├── base_page.resource
+│   ├── login_page.resource
+│   └── dashboard_page.resource
+│
+├── tests/
+│   ├── functional/
+│   │   ├── ui/
+│   │   │   └── login/
+│   │   │       ├── login_suite.robot
+│   │   │       └── login_suite.resource
+│   │   └── api/
+│   │       └── auth/
+│   │           ├── auth_suite.robot
+│   │           └── auth_suite.resource
+│   └── smoke/
+│       └── smoke_suite.robot
+│
+├── data/
+│   ├── users.csv
+│   ├── users.json
+│   └── payloads/
+│       └── create_user.json
+│
+├── config/
+│   └── robot.yaml
+│
+├── reports/
+├── .robocop
+├── requirements.txt
+└── README.md
+```
+ 
+---
+ 
+## Padrões de Projeto
+ 
+### 1. Page Object Model (POM)
+ 
+Cada página tem seu próprio `.resource` com keywords encapsulando os seletores e ações.
+ 
+**Regras:**
+- Nunca use seletores diretamente nos arquivos `.robot` — sempre via Page Object
+- Prefixe keywords com o nome da página: `Login Page.Fill Credentials`
+- Page base (`base_page.resource`) contém keywords comuns: aguardar elemento, scroll, screenshot em falha
+**Exemplo — `pages/login_page.resource`:**
+```robot
+*** Settings ***
+Library    SeleniumLibrary
+Resource   ../resources/variables/common_variables.resource
+ 
+*** Variables ***
+${USERNAME_INPUT}    id:username
+${PASSWORD_INPUT}    id:password
+${LOGIN_BUTTON}      id:login-btn
+${ERROR_MESSAGE}     css:.error-message
+ 
+*** Keywords ***
+Login Page.Open
+    Go To    ${BASE_URL}/login
+    Wait Until Element Is Visible    ${LOGIN_BUTTON}    timeout=${TIMEOUT}
+ 
+Login Page.Fill Credentials
+    [Arguments]    ${username}    ${password}
+    Input Text    ${USERNAME_INPUT}    ${username}
+    Input Password    ${PASSWORD_INPUT}    ${password}
+ 
+Login Page.Submit
+    Click Element    ${LOGIN_BUTTON}
+ 
+Login Page.Get Error Message
+    Wait Until Element Is Visible    ${ERROR_MESSAGE}    timeout=${TIMEOUT}
+    ${text}=    Get Text    ${ERROR_MESSAGE}
+    RETURN    ${text}
+```
+ 
+---
+ 
+### 2. Keyword-Driven Testing
+ 
+Keywords de negócio de alto nível que orquestram Page Objects e ações.
+ 
+**Regras:**
+- Keywords de negócio ficam em `resources/keywords/`
+- Nomes devem expressar intenção de negócio, não implementação técnica
+- Use `[Documentation]` em toda keyword não trivial
+**Exemplo — `resources/keywords/ui_keywords.resource`:**
+```robot
+*** Settings ***
+Resource    ../../pages/login_page.resource
+Resource    ../../pages/dashboard_page.resource
+ 
+*** Keywords ***
+Realizar Login Com Sucesso
+    [Documentation]    Executa o fluxo completo de login com credenciais válidas
+    [Arguments]    ${username}    ${password}
+    Login Page.Open
+    Login Page.Fill Credentials    ${username}    ${password}
+    Login Page.Submit
+    Dashboard Page.Should Be Visible
+ 
+Realizar Login Com Credenciais Inválidas
+    [Documentation]    Tenta login com credenciais inválidas e valida mensagem de erro
+    [Arguments]    ${username}    ${password}    ${expected_error}
+    Login Page.Open
+    Login Page.Fill Credentials    ${username}    ${password}
+    Login Page.Submit
+    ${error}=    Login Page.Get Error Message
+    Should Be Equal As Strings    ${error}    ${expected_error}
+```
+ 
+---
+ 
+### 3. BDD (Gherkin Style)
+ 
+Use tags e nomenclatura Gherkin nos arquivos `.robot`.
+ 
+**Regras:**
+- Estruture test cases com `Given / When / Then / And`
+- Use `[Tags]` para classificar: `smoke`, `regression`, `critical`, `flaky`
+- Cada cenário deve ser independente
+**Exemplo — `tests/functional/ui/login/login_suite.robot`:**
+```robot
+*** Settings ***
+Resource          login_suite.resource
+Suite Setup       Open Browser To Application
+Suite Teardown    Close All Browsers
+Test Setup        Login Page.Open
+Test Teardown     Capture Page Screenshot On Failure
+ 
+*** Test Cases ***
+Cenário: Login com credenciais válidas
+    [Tags]    smoke    regression    critical
+    [Documentation]    Valida que um usuário com credenciais corretas acessa o sistema
+    Given O usuário está na página de login
+    When Informa credenciais válidas    ${VALID_USER}    ${VALID_PASSWORD}
+    Then O dashboard deve ser exibido
+ 
+Cenário: Login com senha incorreta
+    [Tags]    regression    security
+    [Documentation]    Valida que mensagem de erro adequada é exibida para senha inválida
+    Given O usuário está na página de login
+    When Informa credenciais inválidas    ${VALID_USER}    wrong_password
+    Then Mensagem de erro deve ser exibida    ${MSG_INVALID_CREDENTIALS}
+```
+ 
+---
+ 
+### 4. Data-Driven Testing
+ 
+**Regras:**
+- Dados sensíveis NUNCA em arquivos versionados — use variáveis de ambiente ou vault
+- Use `Test Template` para múltiplos cenários com mesma lógica
+- Dados externos em `/data` (CSV, JSON)
+**Exemplo:**
+```robot
+*** Settings ***
+Library           DataDriver    file=../../../../data/users.csv    encoding=utf-8
+Resource          login_suite.resource
+Test Template     Validar Login Com Dados
+ 
+*** Test Cases ***
+Login com usuário: ${username} deve resultar em: ${expected_result}
+    [Tags]    data-driven    regression
+ 
+*** Keywords ***
+Validar Login Com Dados
+    [Arguments]    ${username}    ${password}    ${expected_result}
+    Login Page.Open
+    Login Page.Fill Credentials    ${username}    ${password}
+    Login Page.Submit
+    Run Keyword If    '${expected_result}' == 'success'
+    ...    Dashboard Page.Should Be Visible
+    ...    ELSE
+    ...    Login Page.Error Should Match    ${expected_result}
+```
+ 
+---
+ 
+## Testes de API
+ 
+### Keywords de API — `resources/keywords/api_keywords.resource`
+ 
+```robot
+*** Settings ***
+Library    RequestsLibrary
+Library    Collections
+Library    BuiltIn
+ 
+*** Keywords ***
+Criar Sessão API
+    [Documentation]    Cria sessão HTTP reutilizável com headers padrão
+    [Arguments]    ${alias}=default    ${base_url}=${API_BASE_URL}    ${token}=${EMPTY}
+    ${headers}=    Create Dictionary
+    ...    Content-Type=application/json
+    ...    Accept=application/json
+    Run Keyword If    '${token}' != '${EMPTY}'
+    ...    Set To Dictionary    ${headers}    Authorization=Bearer ${token}
+    Create Session    ${alias}    ${base_url}    headers=${headers}    verify=True
+ 
+Fazer Requisição GET
+    [Arguments]    ${endpoint}    ${alias}=default    ${expected_status}=200
+    ${response}=    GET On Session    ${alias}    ${endpoint}
+    Should Be Equal As Integers    ${response.status_code}    ${expected_status}
+    RETURN    ${response}
+ 
+Fazer Requisição POST
+    [Arguments]    ${endpoint}    ${payload}    ${alias}=default    ${expected_status}=201
+    ${response}=    POST On Session    ${alias}    ${endpoint}    json=${payload}
+    Should Be Equal As Integers    ${response.status_code}    ${expected_status}
+    RETURN    ${response}
+ 
+Validar Schema da Resposta
+    [Documentation]    Valida campos obrigatórios na resposta JSON
+    [Arguments]    ${response}    @{required_fields}
+    ${json}=    Set Variable    ${response.json()}
+    FOR    ${field}    IN    @{required_fields}
+        Dictionary Should Contain Key    ${json}    ${field}
+        ...    msg=Campo obrigatório '${field}' ausente na resposta
+    END
+```
+ 
+---
+ 
+## Resiliência e Segurança
+ 
+### Retry em Elementos Instáveis
+ 
+```robot
+*** Keywords ***
+Aguardar E Clicar Com Retry
+    [Arguments]    ${locator}    ${retry}=3
+    Wait Until Keyword Succeeds    ${retry}x    2s    Click Element    ${locator}
+```
+ 
+### Screenshot Automático em Falha
+ 
+```robot
+*** Keywords ***
+Capture Page Screenshot On Failure
+    Run Keyword If Test Failed    Capture Page Screenshot
+    ...    filename=${OUTPUT_DIR}/screenshots/{TEST NAME}-{index}.png
+```
+ 
+### Validações de Segurança em API
+ 
+```robot
+*** Keywords ***
+Validar Headers de Segurança
+    [Arguments]    ${response}
+    Should Contain    ${response.headers}    X-Content-Type-Options
+    Should Contain    ${response.headers}    X-Frame-Options
+    Should Contain    ${response.headers}    Strict-Transport-Security
+ 
+Testar Endpoint Sem Autenticação
+    [Arguments]    ${endpoint}    ${method}=GET
+    ${response}=    GET On Session    no-auth    ${endpoint}
+    Should Be Equal As Integers    ${response.status_code}    401
+    ...    msg=Endpoint '${endpoint}' não está protegido
+ 
+Testar Rate Limiting
+    [Arguments]    ${endpoint}    ${max_requests}=100
+    FOR    ${i}    IN RANGE    ${max_requests}
+        Fazer Requisição GET    ${endpoint}    expected_status=200
+    END
+    ${response}=    GET On Session    default    ${endpoint}
+    Should Be Equal As Integers    ${response.status_code}    429
+    ...    msg=Rate limiting não configurado em '${endpoint}'
+```
+ 
+---
+ 
+## CI/CD — GitHub Actions
+ 
+### `.github/workflows/regression.yml`
+ 
+```yaml
+name: Regression Tests
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1-5'
+ 
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chrome, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium firefox
+      - name: Run Regression Tests
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          robot \
+            --variable ENV:staging \
+            --variable BROWSER:${{ matrix.browser }} \
+            --outputdir reports/${{ matrix.browser }} \
+            --loglevel INFO \
+            --tagstatinclude regression \
+            tests/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robot-reports-${{ matrix.browser }}
+          path: reports/${{ matrix.browser }}/
+```
+ 
+### `.github/workflows/smoke.yml`
+ 
+```yaml
+name: Smoke Tests
+on:
+  push:
+    branches: ['**']
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Run Smoke Tests
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+        run: |
+          robot --include smoke --outputdir reports/smoke tests/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-reports
+          path: reports/smoke/
+```
+ 
+---
+ 
+## Configuração de Qualidade
+ 
+### `requirements.txt`
+```
+robotframework==7.1
+robotframework-seleniumlibrary==6.3.0
+robotframework-browser==18.6.0
+robotframework-requests==0.9.7
+robotframework-databaselibrary==1.4.3
+robotframework-datadriver==1.11.2
+allure-robotframework==2.13.5
+robocop==5.6.0
+webdriver-manager==4.0.2
+playwright==1.44.0
+```
+ 
+### `.robocop`
+```
+[robocop]
+include = all
+threshold = W
+```
+ 
+---
+ 
+## Convenções e Boas Práticas
+ 
+| Elemento | Padrão | Exemplo |
+|---|---|---|
+| Test Case | Frase descritiva em português | `Login com credenciais expiradas deve redirecionar` |
+| Keyword | PascalCase, verbo infinitivo | `Realizar Login Com Sucesso` |
+| Variável | SNAKE_UPPER_CASE | `${BASE_URL}`, `${TIMEOUT}` |
+| Arquivo `.robot` | snake_case | `login_suite.robot` |
+| Arquivo `.resource` | snake_case | `login_page.resource` |
+| Tag | kebab-case | `smoke`, `critical`, `data-driven` |
+ 
+### Regras de Ouro
+1. **Um teste, uma responsabilidade** — cada test case valida exatamente uma coisa
+2. **Independência total** — nenhum teste depende do estado de outro
+3. **Sem magic strings** — toda string literal vira variável nomeada
+4. **Seletores robustos** — prefira `data-testid` > `id` > `css` > `xpath`
+5. **Dados fora do código** — massa de dados em `/data`, credenciais em secrets/env
+6. **Teardown sempre** — limpe estado (logout, delete de registros) no teardown
+7. **Documentação inline** — `[Documentation]` em toda suite e keyword complexa
+### Tags Obrigatórias
+Todo test case deve ter ao menos uma tag de **escopo** e uma de **criticidade**:
+- Escopo: `smoke`, `regression`, `integration`, `security`, `data-driven`
+- Criticidade: `critical`, `high`, `medium`, `low`
+- Especiais: `flaky` (instáveis conhecidos), `wip` (em desenvolvimento)
+---
+ 
+## Processo ao Gerar Testes
+ 
+Quando o usuário pedir para criar testes Robot Framework:
+ 
+1. **Identificar tipo**: UI (web) ou API?
+2. **Mapear o fluxo**: ações, dados de entrada, resultados esperados
+3. **Definir padrão**: qual combinação de POM/Keyword/BDD/Data-Driven se aplica
+4. **Analisar segurança**: há autenticação? Testar acesso não autorizado e headers
+5. **Definir resiliência**: há elementos instáveis? Aplicar retry e esperas explícitas
+6. **Gerar os arquivos**: seguindo a estrutura de referência
+7. **Sugerir tags e CI**: indicar quais tags aplicar e se entra em smoke ou regression
+Se o usuário tiver um projeto existente, leia a estrutura antes de gerar código e adapte ao padrão já adotado, preservando convenções existentes.

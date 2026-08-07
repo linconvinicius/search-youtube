@@ -1,0 +1,109 @@
+## 7.1 Por Que Robot Framework? A Ponte para a Automação
+
+O **Robot Framework** é uma estrutura de automação de testes genérica e de código aberto, utilizada para uma vasta gama de propósitos, incluindo automação de testes de aceitação, automação de processos robóticos (RPA) e desenvolvimento orientado a testes (ATDD). Sua principal característica, e o que o torna extremamente atraente para QAs, especialmente aqueles que estão iniciando na automação, é a sua **sintaxe baseada em palavras-chave (keyword-driven) e em linguagem natural** [1].
+
+### Vantagens Chave do Robot Framework para QAs:
+
+1. **Fácil de Aprender e Usar:** A sintaxe do Robot Framework é projetada para ser simples e legível, lembrando muito uma linguagem humana. Isso significa que você pode escrever testes que se parecem com frases em inglês (ou português, se você criar suas próprias palavras-chave), o que facilita enormemente a curva de aprendizado para quem não tem um background forte em programação. Você pode focar na lógica do teste, e não na complexidade da sintaxe de uma linguagem de programação.
+2. **Extensibilidade Poderosa:** Embora seja fácil de usar, o Robot Framework é incrivelmente poderoso e extensível. Ele pode ser expandido com bibliotecas implementadas em Python ou Java. Existem centenas de bibliotecas prontas para uso, como a `SeleniumLibrary` para automação web, a `RequestsLibrary` para testes de APIs, `DatabaseLibrary` para interagir com bancos de dados, entre muitas outras. Isso significa que você pode automatizar praticamente qualquer coisa.
+3. **Plataforma Independente:** O Robot Framework funciona perfeitamente em diferentes sistemas operacionais (Windows, macOS, Linux), garantindo flexibilidade para o ambiente de trabalho do QA.
+4. **Relatórios e Logs Detalhados:** Uma das funcionalidades mais elogiadas do Robot Framework é a sua capacidade de gerar relatórios e logs de execução em HTML de forma automática e muito clara. Esses relatórios são fáceis de ler, contêm informações detalhadas sobre cada passo do teste (incluindo screenshots em caso de falha), facilitando a análise dos resultados e a depuração de problemas.
+5. **Comunidade Ativa e Documentação Robusta:** Possui uma comunidade grande e ativa de usuários e desenvolvedores, o que significa que há muitos recursos, exemplos, documentação detalhada e suporte disponível online. Isso é um grande benefício para quem está aprendendo.
+6. **Reutilização de Código e Manutenção:** O conceito de palavras-chave personalizadas (Keywords) promove a reutilização de código de forma eficaz. Você pode criar uma palavra-chave para uma sequência de ações complexas (ex: "Fazer Login") e reutilizá-la em vários testes, tornando a manutenção muito mais simples. Se a lógica de login mudar, você altera apenas uma palavra-chave.
+7. **Integração com CI/CD:** O Robot Framework se integra facilmente com ferramentas de Integração Contínua e Entrega Contínua (CI/CD) como Jenkins, GitLab CI, GitHub Actions, permitindo que seus testes automatizados sejam executados automaticamente a cada nova alteração de código, fornecendo feedback rápido sobre a qualidade.
+
+Para um QA que está começando na automação, o Robot Framework oferece uma ponte suave e eficiente entre o pensamento de teste manual e a lógica de programação, permitindo que você comece a entregar valor rapidamente na automação.
+
+## 7.2 Configuração do Ambiente: Preparando o Terreno para a Automação
+
+Antes de mergulhar na escrita de testes com Robot Framework, é essencial configurar corretamente o ambiente de desenvolvimento. Os principais componentes que precisaremos instalar e configurar são o Python (que é a base do Robot Framework), o próprio Robot Framework, e um editor de código como o VS Code para escrever e gerenciar seus testes.
+
+### 1. Instalação do Python
+
+O Robot Framework é construído em Python, o que significa que o Python precisa estar instalado no seu sistema. Recomenda-se a versão 3.8 ou superior para garantir compatibilidade e acesso às funcionalidades mais recentes [2].
+
+- **Download:** Acesse o site oficial do Python: https://www.python.org/downloads/
+- **Instalação (Windows):**
+    1. Baixe o instalador executável (ex: `python-3.x.x-amd64.exe`).
+    2. **MUITO IMPORTANTE:** Durante a primeira tela do instalador, **marque a opção "Add Python to PATH"** (Adicionar Python ao PATH). Isso garantirá que o Python e o pip (seu gerenciador de pacotes) sejam reconhecidos no terminal de qualquer diretório.
+    3. Prossiga com a instalação padrão.
+- **Instalação (macOS/Linux):** Python geralmente já vem pré-instalado, mas pode ser uma versão mais antiga. Recomenda-se instalar uma versão mais recente usando gerenciadores de pacotes como `brew` (macOS) ou o gerenciador de pacotes da sua distribuição Linux (ex: `apt` para Ubuntu).
+    - Exemplo macOS com Homebrew: `brew install python@3.x`
+- **Verificação da Instalação:** Abra o terminal (Prompt de Comando no Windows, Terminal no macOS/Linux) e digite os seguintes comandos para verificar se o Python e o pip foram instalados corretamente e estão no PATH:
+    
+    ```bash
+    python --version
+    pip --version
+    ```
+    
+    Você deve ver as versões instaladas do Python e do pip. Se receber um erro como "command not found", significa que o Python não foi adicionado corretamente ao PATH, e você precisará adicioná-lo manualmente ou reinstalar com a opção marcada.
+    
+
+### 2. Instalação do Robot Framework
+
+Com o Python e o pip instalados e funcionando, a instalação do Robot Framework é um processo simples:
+
+- **Instalação:** No terminal, digite o seguinte comando:
+    
+    ```bash
+    pip install robotframework
+    ```
+    
+    Este comando baixará e instalará o Robot Framework e suas dependências.
+    
+- **Verificação da Instalação:** Para confirmar que o Robot Framework foi instalado com sucesso, digite:
+    
+    ```bash
+    robot --version
+    ```
+    
+    Você deve ver a versão do Robot Framework instalada (ex: `Robot Framework 6.1.1 (Python 3.10.x on win32)`).
+    
+
+### 3. Instalação de Bibliotecas Essenciais (Ex: SeleniumLibrary)
+
+O Robot Framework, por si só, fornece a estrutura para escrever testes. Para interagir com aplicações web, APIs, bancos de dados, etc., ele utiliza **bibliotecas externas**. A mais comum para automação web é a `SeleniumLibrary`.
+
+- **Instalação da SeleniumLibrary:** No terminal, digite:
+    
+    ```bash
+    pip install robotframework-seleniumlibrary
+    ```
+    
+- **WebDrivers:** A SeleniumLibrary precisa de um **WebDriver** para controlar o navegador. Um WebDriver é um executável que atua como uma ponte entre a SeleniumLibrary e o navegador real (Chrome, Firefox, Edge). Você precisará baixar o WebDriver correspondente ao navegador que deseja automatizar e colocá-lo em um diretório que esteja no PATH do seu sistema, ou especificar o caminho diretamente nos seus scripts Robot.
+    - **ChromeDriver (para Google Chrome):** https://chromedriver.chromium.org/downloads
+    - **GeckoDriver (para Mozilla Firefox):** https://github.com/mozilla/geckodriver/releases
+    - **msedgedriver (para Microsoft Edge):** https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/
+    - **Dica:** Baixe a versão do WebDriver que corresponde à versão do seu navegador instalado. Coloque o arquivo executável (ex: `chromedriver.exe`) em uma pasta como `C:\WebDriver` (Windows) ou `/usr/local/bin` (Linux/macOS) e adicione essa pasta ao seu PATH do sistema.
+
+### 4. Instalação do VS Code e Extensões Essenciais
+
+O **Visual Studio Code (VS Code)** é um editor de código leve, poderoso e gratuito, com excelente suporte para Python e Robot Framework. É a ferramenta mais recomendada para escrever seus testes [3].
+
+- **Download:** Acesse o site oficial do VS Code: https://code.visualstudio.com/
+- **Instalação:** Siga as instruções para o seu sistema operacional.
+- **Extensões Recomendadas (Instale dentro do VS Code):**
+    - **Robot Framework Language Server:** Essencial! Oferece autocompletar, realce de sintaxe, validação de código, navegação entre palavras-chave e outras funcionalidades que tornam a escrita de testes Robot muito mais produtiva.
+    - **Python:** Fornece suporte completo para desenvolvimento Python, o que é útil se você precisar criar suas próprias bibliotecas ou scripts auxiliares.
+    - **Prettier - Code formatter:** Ajuda a manter seu código formatado de forma consistente e legível.
+
+Com esses passos, seu ambiente estará completamente configurado e pronto para você começar a escrever e executar seus primeiros testes automatizados com Robot Framework!
+
+## 7.3 Estrutura de um Projeto Robot Framework: Organização e Reutilização
+
+Um projeto bem-sucedido de automação de testes com Robot Framework não se resume apenas a escrever testes, mas também a organizá-los de forma lógica, legível e de fácil manutenção. O Robot Framework incentiva uma estrutura modular através de seus diferentes tipos de seções dentro dos arquivos `.robot` [4]. Compreender essa estrutura é fundamental para construir automações robustas e escaláveis.
+
+### Seções Principais de um Arquivo `.robot`
+
+Cada arquivo `.robot` é dividido em seções, que são indicadas por três asteriscos (`***`) seguidos do nome da seção. As seções mais comuns são:
+
+1. **`** *Settings* **` (Configurações):**
+    - Esta seção é usada para definir configurações globais para o arquivo de teste atual. É aqui que você importa bibliotecas externas, outros arquivos de recurso (resources) e conjuntos de variáveis.
+    - **O que você pode configurar aqui:**
+        - `Library`: Importa bibliotecas como `SeleniumLibrary`, `RequestsLibrary`, etc.
+        - `Resource`: Importa outros arquivos `.robot` ou `.resource` que contêm palavras-chave e variáveis reutilizáveis.
+        - `Variables`: Importa arquivos de variáveis ou define variáveis globais.
+        - `Test Setup`: Uma palavra-chave que será executada **antes de cada caso de teste** neste arquivo.
+        - `Test Teardown`: Uma palavra-chave que será executada **depois de cada caso de teste** neste arquivo, independentemente do resultado (útil para limpeza).
+        - `Suite Setup` / `Suite Teardown`: Semelhante ao `Test Setup`/`Teardown`, mas executado uma vez antes/depois de **todos os testes** no arquivo/suíte.
+    - **Exemplo:**

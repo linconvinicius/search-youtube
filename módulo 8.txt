@@ -1,0 +1,235 @@
+# Módulo 8: Automação Web (Front-end)
+
+## 8.1 Localizadores (Locators): A Chave para Interagir com Elementos Web
+
+Para automatizar a interação com uma página web, o Robot Framework (através de suas bibliotecas como `SeleniumLibrary` ou `BrowserLibrary`) precisa saber **onde** na página ele deve clicar, digitar, verificar um texto ou interagir de qualquer outra forma. Isso é feito usando **localizadores** (locators). Um localizador é uma forma de identificar um elemento HTML único (ou um conjunto de elementos) na página. A escolha do localizador correto é crucial para a **robustez** (resistência a mudanças) e **manutenibilidade** (facilidade de atualização) dos seus testes [1].
+
+Vamos explorar os localizadores mais comuns, do mais recomendado ao que deve ser usado com cautela:
+
+### 1. ID (`id=`)
+
+- **Descrição:** O localizador mais simples, rápido e **recomendado**. Ele identifica um elemento HTML pelo seu atributo `id`. De acordo com as boas práticas de desenvolvimento web, os IDs devem ser **únicos** em uma página HTML. Isso o torna extremamente confiável.
+- **Exemplo HTML:** `<input id="username" type="text" placeholder="Seu usuário">`
+- **Exemplo Robot Framework:** `Input Text    id=username    ${USERNAME}`
+- **Vantagens:** Rápido, robusto e fácil de ler. Se um elemento tem um ID, use-o!
+- **Desvantagens:** Nem todos os elementos possuem um ID. Desenvolvedores podem não seguir a regra de unicidade (embora seja uma má prática).
+
+### 2. Name (`name=`)
+
+- **Descrição:** Identifica um elemento pelo seu atributo `name`. É comumente usado em formulários para agrupar campos ou para enviar dados ao servidor.
+- **Exemplo HTML:** `<input name="password" type="password" placeholder="Sua senha">`
+- **Exemplo Robot Framework:** `Input Text    name=password    ${PASSWORD}`
+- **Vantagens:** Relativamente robusto, especialmente em formulários. Mais legível que seletores complexos.
+- **Desvantagens:** O atributo `name` **pode não ser único** na página, o que pode levar a interações com o elemento errado se houver múltiplos com o mesmo nome.
+
+### 3. CSS Selector (`css=`)
+
+- **Descrição:** Permite selecionar elementos usando seletores CSS, a mesma linguagem que os desenvolvedores usam para estilizar páginas web. É muito flexível e poderoso, podendo combinar diferentes atributos, classes e a estrutura do HTML.
+- **Exemplo HTML:** `<button class="btn primary" type="submit">Login</button>`
+- **Exemplo Robot Framework:**
+    - `Click Button    css=button.primary` (seleciona um botão com a classe `primary`)
+    - `Click Button    css=button[type="submit"]` (seleciona um botão com o atributo `type="submit"`)
+    - `Click Element    css=#loginForm input[type="text"]` (seleciona um input de texto dentro de um formulário com ID `loginForm`)
+- **Vantagens:** Muito flexível, rápido e pode ser usado para encontrar elementos sem ID ou Name. É uma boa alternativa quando IDs e Names não estão disponíveis ou não são únicos.
+- **Desvantagens:** Pode ser complexo para iniciantes e menos legível se o seletor for muito longo. Requer um bom entendimento de CSS.
+
+### 4. XPath (XML Path Language) (`xpath=`)
+
+- **Descrição:** Uma linguagem para navegar em documentos XML (e HTML, que é uma forma de XML). É o localizador **mais poderoso e flexível**, capaz de encontrar qualquer elemento na página, navegando pela estrutura do DOM (Document Object Model). No entanto, é também o **mais propenso a quebrar** com pequenas mudanças na estrutura da página.
+- **Exemplo HTML:** `<div class="form-group"><label>Email:</label><input type="email"></div>`
+- **Exemplo Robot Framework:**
+    - `Input Text    xpath=//input[@type='email']` (seleciona um input com o atributo `type='email'`)
+    - `Input Text    xpath=//div[@class='form-group']/input` (seleciona um input que é filho direto de uma div com a classe `form-group`)
+    - `Click Element    xpath=//button[contains(text(), 'Salvar')]` (seleciona um botão que contém o texto "Salvar")
+- **Vantagens:** Pode localizar qualquer elemento, mesmo sem atributos únicos, e permite navegar pela árvore do DOM.
+- **Desvantagens:** Lento, complexo, e **muito frágil** a mudanças na estrutura do HTML. Deve ser usado como **último recurso** e com muita cautela, preferindo XPath absolutos (que começam com `/html/body/...`) apenas em casos extremos, pois são os mais frágeis.
+
+**Dica de Ouro para QAs:** Sempre prefira IDs, depois Names, CSS Selectors e, por último, XPath. Use as ferramentas de desenvolvedor do navegador (F12) para inspecionar elementos e testar seus localizadores antes de usá-los no seu código de automação.
+
+## 8.2 SeleniumLibrary vs. BrowserLibrary (Playwright): Escolhendo a Ferramenta Certa
+
+O Robot Framework é agnóstico em relação à biblioteca de automação web que você usa, o que significa que você pode escolher a que melhor se adapta às suas necessidades. As duas opções mais populares e poderosas para automação web com Robot Framework são a `SeleniumLibrary` e a `BrowserLibrary` (que utiliza o Playwright). Ambas têm seus pontos fortes e fracos, e a escolha ideal pode depender do contexto do seu projeto [2] [3].
+
+### SeleniumLibrary
+
+- **Baseado em:** Selenium WebDriver, a ferramenta de automação de navegadores mais tradicional e amplamente utilizada no mercado.
+- **Vantagens:**
+    - **Maturidade e Comunidade:** É a biblioteca mais antiga e amplamente utilizada para automação web com Robot Framework. Possui uma vasta documentação, inúmeros exemplos e uma comunidade enorme e ativa, o que facilita encontrar suporte e soluções para problemas.
+    - **Suporte a Navegadores:** Suporta todos os principais navegadores (Chrome, Firefox, Edge, Safari) e suas versões mais antigas.
+    - **Integração:** Boa integração com outras ferramentas e serviços de teste.
+- **Desvantagens:**
+    - **Velocidade:** Pode ser mais lenta em comparação com o Playwright, especialmente em testes paralelos ou em cenários de alta demanda.
+    - **Configuração e Gerenciamento de WebDrivers:** Requer a gestão manual dos WebDrivers (ChromeDriver, GeckoDriver, etc.), que precisam ser compatíveis com a versão do navegador instalado. Isso pode ser um ponto de dor na configuração e manutenção do ambiente.
+    - **Assincronicidade:** Lida com operações assíncronas (como requisições AJAX) de forma mais complexa, muitas vezes exigindo esperas explícitas.
+
+### BrowserLibrary (baseada em Playwright)
+
+- **Baseado em:** Playwright, uma biblioteca de automação web mais recente e moderna, desenvolvida pela Microsoft. O Playwright foi projetado para superar algumas das limitações do Selenium.
+- **Vantagens:**
+    - **Velocidade e Confiabilidade:** Geralmente mais rápida e confiável que o Selenium, especialmente para testes em larga escala e execução paralela. O Playwright interage com o navegador em um nível mais baixo, o que o torna mais eficiente.
+    - **Configuração Simplificada:** Gerencia automaticamente os WebDrivers, simplificando drasticamente a configuração do ambiente e eliminando problemas de compatibilidade de versão.
+    - **Recursos Modernos:** Suporte nativo para recursos avançados como Shadow DOM, iframes, downloads, uploads, testes de API (integrado na mesma ferramenta), emulação de dispositivos móveis e geolocalização.
+    - **Auto-wait Inteligente:** Possui mecanismos de espera inteligentes que aguardam automaticamente os elementos estarem prontos para interação, reduzindo a necessidade de esperas explícitas e tornando os testes mais estáveis e menos "flaky" (instáveis).
+    - **Contextos de Navegador:** Permite criar múltiplos contextos de navegador isolados dentro de uma única instância do navegador, ideal para testes de múltiplos usuários ou cenários complexos.
+- **Desvantagens:**
+    - **Maturidade e Comunidade:** Por ser mais recente, a comunidade e a quantidade de exemplos podem ser menores em comparação com o Selenium.
+    - **Curva de Aprendizado:** Embora a sintaxe do Robot Framework seja simples, alguns conceitos específicos do Playwright podem exigir um pouco mais de familiaridade para QAs que estão acostumados apenas com Selenium.
+
+**Recomendação:** Para novos projetos de automação web, a **BrowserLibrary** é frequentemente a escolha preferida devido à sua velocidade, confiabilidade, recursos modernos e configuração simplificada. Ela representa o futuro da automação web. No entanto, se você já tem um projeto legado com `SeleniumLibrary` ou precisa de compatibilidade com navegadores muito antigos, a `SeleniumLibrary` ainda é uma opção sólida e amplamente utilizada.
+
+## 8.3 Criando Keywords Personalizadas para Reutilização: O Poder da Abstração
+
+Uma das maiores forças do Robot Framework, e um pilar para a construção de automações eficientes e manuteníveis, é a capacidade de criar **Keywords personalizadas** (User Keywords). Elas permitem encapsular uma sequência de ações em um único comando, tornando seus testes mais legíveis, reutilizáveis e fáceis de manter. Em vez de repetir os mesmos passos em vários testes, você cria uma Keyword e a chama sempre que precisar [4].
+
+### Benefícios das Keywords Personalizadas:
+
+- **Legibilidade Aprimorada:** Os casos de teste se tornam mais próximos da linguagem natural, facilitando a compreensão por qualquer pessoa, mesmo sem conhecimento técnico profundo. Um teste de login pode ser simplesmente `Realizar Login    ${USERNAME}    ${PASSWORD}`.
+- **Reutilização de Código:** Evita a duplicação de código. Uma Keyword pode ser usada em múltiplos casos de teste e até mesmo em diferentes arquivos de teste, promovendo a consistência.
+- **Manutenibilidade Simplificada:** Se a lógica de uma ação mudar (ex: o processo de login é alterado), você só precisa atualizar a Keyword em um único lugar (no arquivo onde ela foi definida), e todos os testes que a utilizam serão atualizados automaticamente. Isso economiza tempo e reduz a chance de erros.
+- **Abstração da Complexidade:** Esconde a complexidade dos passos de baixo nível, permitindo que os casos de teste se concentrem na intenção do teste e na lógica de negócio, e não nos detalhes técnicos da interação com a UI.
+
+### Exemplo Prático: Refatorando o Login com uma Keyword Personalizada
+
+Vamos refatorar o exemplo de login que vimos no Módulo 7 para usar uma Keyword personalizada, demonstrando como isso melhora a organização.
+
+**Arquivo: `resources/login_keywords.robot`** (Este arquivo conterá as Keywords relacionadas ao login)
+
+```
+*** Settings ***
+Library    SeleniumLibrary    # Ou BrowserLibrary, dependendo da sua escolha
+
+*** Keywords ***
+Realizar Login
+    [Arguments]    ${username}    ${password}
+    Input Text    id=username    ${username}
+    Input Text    id=password    ${password}
+    Click Button  id=loginButton
+    Page Should Contain    Bem-vindo
+
+Verificar Mensagem de Erro de Login
+    [Arguments]    ${expected_message}
+    Wait Until Element Is Visible    css=.error-message
+    Element Text Should Be    css=.error-message    ${expected_message}
+```
+
+**Arquivo: `tests/test_login.robot`** (Este arquivo conterá os casos de teste que utilizam as Keywords)
+
+```
+*** Settings ***
+Library           SeleniumLibrary
+Resource          resources/login_keywords.robot  # Importa as Keywords de login
+Test Setup        Open Browser    https://www.exemplo.com/login    chrome
+Test Teardown     Close Browser
+
+*** Test Cases ***
+Cenário: Login com credenciais válidas
+    Realizar Login    usuario_valido    senha_valida
+    Page Should Contain    Dashboard
+
+Cenário: Login com credenciais inválidas
+    Realizar Login    usuario_invalido    senha_invalida
+    Verificar Mensagem de Erro de Login    Credenciais inválidas
+```
+
+Neste exemplo, a Keyword `Realizar Login` encapsula os passos de interação com os campos de usuário, senha e o botão de login. Os casos de teste ficam muito mais limpos, fáceis de entender e, o mais importante, se a forma de login mudar, você só precisa ajustar a Keyword `Realizar Login` no arquivo `login_keywords.robot`, e todos os testes que a utilizam serão atualizados automaticamente.
+
+## 8.4 Padrão Page Object Model (POM): Estruturando sua Automação Web
+
+O **Page Object Model (POM)** é um padrão de design amplamente utilizado na automação de testes de UI (User Interface). Ele sugere que, para cada página ou componente significativo da sua aplicação web, você crie um "objeto de página" correspondente. Este objeto de página contém os **localizadores dos elementos** daquela página e os **métodos (Keywords no Robot Framework)** que interagem com esses elementos [5].
+
+### Benefícios Cruciais do POM:
+
+- **Reutilização de Código:** Os métodos (Keywords) definidos em um objeto de página podem ser reutilizados em diferentes casos de teste que interagem com aquela página, evitando duplicação.
+- **Manutenibilidade Aprimorada:** Se a UI da página mudar (ex: um ID de elemento é alterado, ou a estrutura HTML de um formulário muda), você só precisa atualizar o localizador ou o método correspondente no objeto de página. Todos os testes que usam esse objeto serão atualizados automaticamente, reduzindo drasticamente o esforço de manutenção.
+- **Legibilidade dos Testes:** Os testes se tornam mais claros e focados na lógica de negócio, pois as interações com a UI são abstraídas pelos métodos do objeto de página. Em vez de ver `Input Text    id=username    ${USERNAME}`, você verá `LoginPage.Preencher Campo Usuario    ${USERNAME}`.
+- **Separação de Responsabilidades:** O POM separa claramente a lógica de teste (o que testar) da lógica de interação com a UI (como interagir com a página). Isso torna o código mais organizado e fácil de entender.
+
+### Estrutura de Projeto Típica com POM no Robot Framework:
+
+```
+projeto_automacao/
+├── resources/
+│   ├── common_keywords.robot  # Keywords genéricas (ex: Abrir Navegador, Fechar Navegador)
+│   └── pages/                 # Pasta para os objetos de página
+│       ├── LoginPage.robot    # Objeto de página para a tela de Login
+│       ├── HomePage.robot     # Objeto de página para a tela Inicial (Dashboard)
+│       ├── ProductPage.robot  # Objeto de página para a tela de Detalhes do Produto
+│       └── ...                # Outros objetos de página
+└── tests/
+    ├── test_login.robot       # Casos de teste relacionados ao login
+    ├── test_cadastro.robot    # Casos de teste relacionados ao cadastro
+    ├── test_compra.robot      # Casos de teste relacionados ao fluxo de compra
+    └── ...
+```
+
+### Exemplo de `LoginPage.robot` (Objeto de Página):
+
+```
+*** Settings ***
+Library    SeleniumLibrary
+
+*** Variables ***
+${USERNAME_FIELD}    id=username
+${PASSWORD_FIELD}    id=password
+${LOGIN_BUTTON}      id=loginButton
+${ERROR_MESSAGE}     css=.error-message
+
+*** Keywords ***
+Preencher Campo Usuario
+    [Arguments]    ${username}
+    Input Text    ${USERNAME_FIELD}    ${username}
+
+Preencher Campo Senha
+    [Arguments]    ${password}
+    Input Text    ${PASSWORD_FIELD}    ${password}
+
+Clicar Botao Login
+    Click Button  ${LOGIN_BUTTON}
+
+Verificar Mensagem Erro Login
+    [Arguments]    ${expected_message}
+    Wait Until Element Is Visible    ${ERROR_MESSAGE}
+    Element Text Should Be    ${ERROR_MESSAGE}    ${expected_message}
+
+Fazer Login Completo
+    [Arguments]    ${username}    ${password}
+    Preencher Campo Usuario    ${username}
+    Preencher Campo Senha      ${password}
+    Clicar Botao Login
+```
+
+### Exemplo de `test_login.robot` Usando o POM:
+
+```
+*** Settings ***
+Library           SeleniumLibrary
+Resource          resources/common_keywords.robot  # Keywords genéricas
+Resource          resources/pages/LoginPage.robot  # Objeto de página de Login
+Test Setup        Abrir Navegador    https://www.exemplo.com/login    chrome
+Test Teardown     Fechar Navegador
+
+*** Test Cases ***
+Cenário: Login bem-sucedido com credenciais válidas
+    Fazer Login Completo    usuario_valido    senha_valida
+    Page Should Contain    Dashboard
+
+Cenário: Login com senha incorreta
+    Fazer Login Completo    usuario_valido    senha_incorreta
+    Verificar Mensagem Erro Login    Credenciais inválidas
+```
+
+Com o Page Object Model, seus testes se tornam mais organizados, fáceis de ler e, o mais importante, muito mais fáceis de manter. Isso é essencial em projetos de automação de testes de longo prazo, onde a aplicação web está em constante evolução. Dominar o POM é um passo fundamental para se tornar um QA de automação proficiente.
+
+---
+
+### Referências
+
+[1] Selenium. *Locating Elements*. Disponível em: https://www.selenium.dev/documentation/webdriver/elements/locators/. Acesso em: 20 mar. 2026.
+
+[2] SeleniumLibrary. *Introduction*. Disponível em: https://robotframework.org/SeleniumLibrary/latest/SeleniumLibrary.html. Acesso em: 20 mar. 2026.
+
+[3] Robot Framework Browser library. *Introduction*. Disponível em: https://marketsquare.github.io/robotframework-browser/. Acesso em: 20 mar. 2026.
+
+[4] Robot Framework. *User Keywords*. Disponível em: https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#user-keywords. Acesso em: 20 mar. 2026.
+
+[5] Selenium. *Page Object Models*. Disponível em: https://www.selenium.dev/documentation/test_practices/encouraged/page_object_models/. Acesso em: 20 mar. 2026.
