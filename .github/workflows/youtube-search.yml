@@ -8,7 +8,7 @@ on:
 
 jobs:
   busca-youtube:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: 📥 Baixar código do repositório
